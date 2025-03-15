@@ -7,10 +7,10 @@
     </q-header>
 
     <q-page-container>
-      <q-page class="q-pa-md">
+      <q-page class="q-pa-none q-mt-md">
         <div class="row justify-center no-wrap">
           <q-col v-for="(item, index) in elevator" :key="index" cols="2" class="q-mr-xs">
-            <q-card  class="text-center justify-center  text-black shadow-2 elevator-card">
+            <q-card class="text-center justify-center  text-black shadow-2 elevator-card">
               <!---Label each elevator and the status of the elevator-->
               <q-card-section>
                 <div class="text-h8"> {{ item.elevatorId }} </div>
@@ -50,16 +50,23 @@
           </q-col>
         </div>
 
+        <q-scroll-area style="height: 100px; max-width: 100%; border: 1px solid #ccc;">
+          <div v-for="(log, index) in logs" :key="index" class="q-pa-xs">
+            {{ log }}
+          </div>
+        </q-scroll-area>
       </q-page>
+
     </q-page-container>
+
   </q-layout>
 </template>
 
 <script setup>
+// Most of the code should be move to other files which i created some of it and refactor but not time for me right now.
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 const elevator = ref([]);
-const isDisabled = ref(false);
 const floors = ref([
   { value: 0, label: "G" },
   { value: 1, label: "1" },
@@ -73,9 +80,10 @@ const buttonRows = ref([
   [{ value: 2, label: "2" }, { value: 3, label: "3" }],
   [{ value: 4, label: "4" }, { value: 5, label: "5" }]
 ]);
+const logs = ref([])
 const selectedFloor = ref(null); // Stores selected button value
 const selectedDirection = ref(null);
-const movingToDestination = ref(false);
+
 onMounted(async () => {
   elevatorStatus()
 });
@@ -113,17 +121,24 @@ const passengerDestinationFloor = async (destination) => {
 }
 
 const startElevator = async () => {
-   try {
-    await axios.get(`/api/elevator/move-elevator?elevatorId=${avaliableElevators.value.elevatorId}`);
+  try {
+    const res = await axios.get(`/api/elevator/move-elevator?elevatorId=${avaliableElevators.value.elevatorId}`);
     avaliableElevators.value = null
     selectedFloor.value = null
     selectedDirection.value = null
     elevatorStatus();
+    if (logs.value.length > 10) {
+      logs.value = []
+    }
+    logs.value = res.data
   } catch (error) {
     console.error("Error fetching data:", error);
-  } 
+  }
 }
 
+
+
+// To smulate progress but not time to do that.
 const loading = ref([false, false, false, false, false])
 function simulateProgress(number) {
   // we set loading state
@@ -138,18 +153,6 @@ function simulateProgress(number) {
 
 </script>
 <style scoped>
-.full-btn {
-  width: 100%;
-  height: 100%;
-  /* Makes sure buttons fill the entire space */
-}
-
-.full-btn2 {
-  width: 100%;
-  margin-bottom: 8px;
-  /* Add spacing between buttons */
-}
-
 .font-size {
   font-size: 8px;
 }
@@ -167,11 +170,12 @@ function simulateProgress(number) {
 }
 
 .elevator-card {
-  min-height: 310px; 
-  width:100px;
+  min-height: 310px;
+  width: 100px;
 }
+
 .card-header {
-  background-color: cadetblue; 
+  background-color: cadetblue;
   color: brown;
 }
 </style>
