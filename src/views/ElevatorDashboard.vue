@@ -84,7 +84,6 @@ const requestElevator = async (floor, direction) => {
     selectedFloor.value = floor
     selectedDirection.value = direction
     const res = await axios.get(`/api/elevator/get-elevator?floor=${floor}&direction=${direction}`);
-    console.log("Elevator:", res.data)
     avaliableElevators.value = res.data
     elevatorStatus();
   } catch (error) {
@@ -132,7 +131,6 @@ const resetElevator = async () => {
 
 const setlogs = async () => {
   const res = await axios.get("/api/elevator/elevator-logs");
-  console.log("logs:", res.data)
   logs.value = res.data
 }
 

@@ -1,9 +1,12 @@
-# elevator-dashboard
 
-This template should help get you started developing with Vue 3 in Vite.
+##  I use these frameworks in this application for demonstration purposes. 
+## The reason I chose these frameworks is that I currently use them at work.
+- Vue
+- Vite
+- Quasar
 
-## Recommended IDE Setup
-I pushed to git all the files including node_module to make eays for you to test
+## Assumption and usage
+I pushed all the files to Git, including node_modules, to make it easier for you to test. This is a demonstration, and I had time limitations, but it needs refactoring and componentization for each function.
 
 ## To run
 
