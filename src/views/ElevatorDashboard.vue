@@ -17,14 +17,15 @@
               <q-separator dark />
               <!------Buttons inside elevator to move to a floor-->
               <q-card-section class="items-center q-pa-none q-mt-md"
-                v-if="avaliableElevators?.elevatorId == item.elevatorId">
+                v-if="avaliableElevators.size > 0 &&  avaliableElevators.has(item.elevatorId)"
+               >
                 <div v-for="(row, rowIndex) in buttonRows" :key="rowIndex" class="row no-wrap justify-center">
                   <q-col v-for="(button, index) in row" :key="index" cols="6">
-                    <q-btn size="10px" @click="passengerDestinationFloor(button.value)">{{ button.label }}</q-btn>
+                    <q-btn size="10px" @click="passengerDestinationFloor(button.value, item.elevatorId)">{{ button.label }}</q-btn>
                   </q-col>
                 </div>
 
-                <q-btn class="q-pa-none q-mt-xs close-btn" color="primary" @click="startElevator">close</q-btn>
+                <q-btn class="q-pa-none q-mt-xs close-btn" color="primary" @click="closeElevator(item.elevatorId)">close</q-btn>
 
               </q-card-section>
               <q-card-section v-else />
@@ -33,14 +34,21 @@
         </div>
         <!----Buttons in each floor to request an elevator-->
         <div class="row justify-center  no-wrap elevator-button-height q-pa-none q-mt-md">
-          <q-col v-for="floor in floors" :key="floor.value" cols="2" class=" q-pa-none q-mr-xs">
-            <q-btn class="close-btn" :disable="floor.value === 5"
-              :style="{ width: '100%', backgroundColor: selectedFloor === floor.value && selectedDirection === 'up' ? '#1976D2' : '#808080', color: selectedFloor === floor.value ? 'white' : 'black' }"
-              :icon="floor.value == 5 ? '' : 'arrow_upward'" @click="requestElevator(floor.value, 'up')" />
-            <q-btn class="close-btn" :disable="floor.value === 0"
-              :style="{ width: '100%', backgroundColor: selectedFloor === floor.value && selectedDirection === 'down' ? '#1976D2' : '#808080', color: selectedFloor === floor.value ? 'white' : 'black' }"
-              :icon="floor.value == 0 ? '' : 'arrow_downward'" @click="requestElevator(floor.value, 'down')" />
-            <p class="q-mt-xs floor-label" >Floor {{ floor.label }}</p>
+          <q-col v-for="floor in floors" :key="floor.value" cols="auto" class=" q-pa-none q-mr-xs">
+            <q-btn 
+               class="close-btn" 
+               :disable="floor.value === maxFloor" 
+               :class="getButtonClass(floor.value, 'up')"
+              :icon="floor.value === maxFloor ? '' : 'arrow_upward'" 
+              @click="requestElevator(floor.value, 'up')" />
+            <q-btn 
+               class="close-btn"
+              :disable="floor.value === minFloor"
+              :class="getButtonClass(floor.value, 'down')"
+             :icon="floor.value === minFloor ? '' : 'arrow_downward'"
+             @click="requestElevator(floor.value, 'down')"
+              />
+            <p class="q-mt-xs floor-label">Floor {{ floor.label }}</p>
           </q-col>
         </div>
         <p class="q-pa-none q-mt-xs">Logs</p>
@@ -59,13 +67,15 @@ import LogsText from "@/components/LogsText.vue";
 import axios from 'axios';
 const elevator = ref([]);
 const floors = ref([
-  { value: 0, label: "G" },
-  { value: 1, label: "1" },
-  { value: 2, label: "2" },
+  { value: 0, label: "G"},
+  { value: 1, label: "1"},
+  { value: 2, label: "2"},
   { value: 3, label: "3" },
   { value: 4, label: "4" },
   { value: 5, label: "5" }
 ]);
+const minFloor = 0;
+const maxFloor = floors.value.length - 1;
 const buttonRows = ref([
   [{ value: 0, label: "G" }, { value: 1, label: "1" }],
   [{ value: 2, label: "2" }, { value: 3, label: "3" }],
@@ -75,16 +85,18 @@ const logs = ref([])
 const selectedFloor = ref(null); // Stores selected button value
 const selectedDirection = ref(null);
 
+
 onMounted(async () => {
   elevatorStatus()
 });
-const avaliableElevators = ref(null);
+const avaliableElevators = ref(new Set());
 const requestElevator = async (floor, direction) => {
   try {
     selectedFloor.value = floor
     selectedDirection.value = direction
     const res = await axios.get(`/api/elevator/get-elevator?floor=${floor}&direction=${direction}`);
-    avaliableElevators.value = res.data
+    avaliableElevators.value.add(res.data.elevatorId);
+    console.log(avaliableElevators.value)
     elevatorStatus();
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -103,9 +115,9 @@ const elevatorStatus = async () => {
   }
 }
 
-const passengerDestinationFloor = async (destination) => {
+const passengerDestinationFloor = async (destination, elevatorId) => {
   try {
-    await axios.get(`/api/elevator/enqueue-stop?elevatorId=${avaliableElevators.value.elevatorId}&destination=${destination}`);
+    await axios.get(`/api/elevator/enqueue-stop?elevatorId=${elevatorId}&destination=${destination}`);
     setlogs();
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -113,10 +125,11 @@ const passengerDestinationFloor = async (destination) => {
 
 }
 
-const startElevator = async () => {
+const closeElevator = async (elevatorId) => {
   try {
-    await axios.get(`/api/elevator/move-elevator?elevatorId=${avaliableElevators.value.elevatorId}`);
-    resetElevator();
+    await axios.get(`/api/elevator/move-elevator?elevatorId=${elevatorId}`);
+    avaliableElevators.value.delete(elevatorId);
+   resetElevator();
     elevatorStatus();
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -124,7 +137,6 @@ const startElevator = async () => {
 }
 
 const resetElevator = async () => {
-  avaliableElevators.value = null
   selectedFloor.value = null
   selectedDirection.value = null
 }
@@ -134,6 +146,12 @@ const setlogs = async () => {
   logs.value = res.data
 }
 
+const getButtonClass = (floorValue, direction) => {
+  return {
+    'arrow-selected': selectedFloor.value === floorValue && selectedDirection.value === direction,
+    'arrow-default': !(selectedFloor.value === floorValue && selectedDirection.value === direction)
+  };
+}
 
 // To smulate progress but not time to do that.
 
@@ -185,5 +203,18 @@ const setlogs = async () => {
   background-color: aliceblue;
   border: 1px solid #808080;
   color: black;
+}
+
+.arrow-selected {
+  width: 100%;
+  color: white;
+  background-color: #1976D2;
+}
+
+.arrow-default {
+  width: 100%;
+  color: black;
+  background-color: #808080;
+
 }
 </style>
