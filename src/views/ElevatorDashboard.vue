@@ -1,62 +1,51 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header elevated>
-      <q-toolbar>
-        <q-toolbar-title>Elevator dashboard</q-toolbar-title>
-      </q-toolbar>
-    </q-header>
-
+    <ElevatorDashboardHeader />
     <q-page-container>
       <q-page class="q-pa-none q-mt-md">
         <div class="row justify-center no-wrap">
           <q-col v-for="(item, index) in elevator" :key="index" cols="2" class="q-mr-xs">
             <q-card class="text-center justify-center  text-black shadow-2 elevator-card">
               <!---Label each elevator and the status of the elevator-->
-              <q-card-section>
-                <div class="text-h8"> {{ item.elevatorId }} </div>
+              <q-card-section class="q-pa-none q-mt-md">
+                <div class="header-text"> {{ item.elevatorId }} </div>
               </q-card-section>
-              <q-card-section class="card-header">
-                <div class="text-h8">{{ item.elevatorState }}</div>
-                <div class="text-h8">{{ item.currentFloor == 0 ? 'G' : item.currentFloor }}</div>
+              <q-card-section class="q-pa-none card-header q-mt-xs">
+                <div class="header-text">{{ item.elevatorState == 'IDLE' ? '-' : item.elevatorState }}</div>
+                <div class="header-text">{{ item.currentFloor == 0 ? 'G' : item.currentFloor }}</div>
               </q-card-section>
               <q-separator dark />
               <!------Buttons inside elevator to move to a floor-->
-              <q-card-section class="flex justify-center items-center"
+              <q-card-section class="items-center q-pa-none q-mt-md"
                 v-if="avaliableElevators?.elevatorId == item.elevatorId">
                 <div v-for="(row, rowIndex) in buttonRows" :key="rowIndex" class="row no-wrap justify-center">
                   <q-col v-for="(button, index) in row" :key="index" cols="6">
-                    <q-btn @click="passengerDestinationFloor(button.value)">{{ button.label }}</q-btn>
+                    <q-btn size="10px" @click="passengerDestinationFloor(button.value)">{{ button.label }}</q-btn>
                   </q-col>
                 </div>
-                <div class="row justify-center q-mt-md">
-                  <q-btn color="primary" size="10px" @click="startElevator">close</q-btn>
-                </div>
+
+                <q-btn class="q-pa-none q-mt-xs close-btn" color="primary" @click="startElevator">close</q-btn>
+
               </q-card-section>
               <q-card-section v-else />
             </q-card>
           </q-col>
         </div>
         <!----Buttons in each floor to request an elevator-->
-        <div class="row justify-center no-wrap elevator-button-height q-pt-md">
-          <q-col v-for="floor in floors" :key="floor.value" cols="2" class="q-mr-xs">
-            <q-btn :disable="floor.value === 5"
+        <div class="row justify-center  no-wrap elevator-button-height q-pa-none q-mt-md">
+          <q-col v-for="floor in floors" :key="floor.value" cols="2" class=" q-pa-none q-mr-xs">
+            <q-btn class="close-btn" :disable="floor.value === 5"
               :style="{ width: '100%', backgroundColor: selectedFloor === floor.value && selectedDirection === 'up' ? '#1976D2' : '#808080', color: selectedFloor === floor.value ? 'white' : 'black' }"
               :icon="floor.value == 5 ? '' : 'arrow_upward'" @click="requestElevator(floor.value, 'up')" />
-            <q-btn :disable="floor.value === 0"
+            <q-btn class="close-btn" :disable="floor.value === 0"
               :style="{ width: '100%', backgroundColor: selectedFloor === floor.value && selectedDirection === 'down' ? '#1976D2' : '#808080', color: selectedFloor === floor.value ? 'white' : 'black' }"
               :icon="floor.value == 0 ? '' : 'arrow_downward'" @click="requestElevator(floor.value, 'down')" />
-            <q-btn :style="{ width: '100%', height: '10px' }" :label="`Floor ${floor.label}`" color="white"
-              text-color="black" class="q-mt-xs font-size" />
+            <p class="q-mt-xs floor-label" >Floor {{ floor.label }}</p>
           </q-col>
         </div>
-
-        <q-scroll-area style="height: 100px; max-width: 100%; border: 1px solid #ccc;">
-          <div v-for="(log, index) in logs" :key="index" class="q-pa-xs">
-            {{ log }}
-          </div>
-        </q-scroll-area>
+        <p class="q-pa-none q-mt-xs">Logs</p>
+        <LogsText :logs="logs" />
       </q-page>
-
     </q-page-container>
 
   </q-layout>
@@ -65,6 +54,8 @@
 <script setup>
 // Most of the code should be move to other files which i created some of it and refactor but not time for me right now.
 import { ref, onMounted } from 'vue';
+import ElevatorDashboardHeader from "@/components/ElevatorDashboardHeader.vue";
+import LogsText from "@/components/LogsText.vue";
 import axios from 'axios';
 const elevator = ref([]);
 const floors = ref([
@@ -93,7 +84,7 @@ const requestElevator = async (floor, direction) => {
     selectedFloor.value = floor
     selectedDirection.value = direction
     const res = await axios.get(`/api/elevator/get-elevator?floor=${floor}&direction=${direction}`);
-    console.log("elevator selected", res.data)
+    console.log("Elevator:", res.data)
     avaliableElevators.value = res.data
     elevatorStatus();
   } catch (error) {
@@ -101,11 +92,13 @@ const requestElevator = async (floor, direction) => {
   }
 }
 
+
+
 const elevatorStatus = async () => {
   try {
     const res = await axios.get("/api/elevator/all");
-    console.log(res.data)
     elevator.value = res.data;
+    setlogs();
   } catch (error) {
     console.error("Error fetching data:", error);
   }
@@ -114,6 +107,7 @@ const elevatorStatus = async () => {
 const passengerDestinationFloor = async (destination) => {
   try {
     await axios.get(`/api/elevator/enqueue-stop?elevatorId=${avaliableElevators.value.elevatorId}&destination=${destination}`);
+    setlogs();
   } catch (error) {
     console.error("Error fetching data:", error);
   }
@@ -122,34 +116,28 @@ const passengerDestinationFloor = async (destination) => {
 
 const startElevator = async () => {
   try {
-    const res = await axios.get(`/api/elevator/move-elevator?elevatorId=${avaliableElevators.value.elevatorId}`);
-    avaliableElevators.value = null
-    selectedFloor.value = null
-    selectedDirection.value = null
+    await axios.get(`/api/elevator/move-elevator?elevatorId=${avaliableElevators.value.elevatorId}`);
+    resetElevator();
     elevatorStatus();
-    if (logs.value.length > 10) {
-      logs.value = []
-    }
-    logs.value = res.data
   } catch (error) {
     console.error("Error fetching data:", error);
   }
 }
 
+const resetElevator = async () => {
+  avaliableElevators.value = null
+  selectedFloor.value = null
+  selectedDirection.value = null
+}
+
+const setlogs = async () => {
+  const res = await axios.get("/api/elevator/elevator-logs");
+  console.log("logs:", res.data)
+  logs.value = res.data
+}
 
 
 // To smulate progress but not time to do that.
-const loading = ref([false, false, false, false, false])
-function simulateProgress(number) {
-  // we set loading state
-  loading.value[number] = true
-
-  // simulate a delay
-  setTimeout(() => {
-    // we're done, we reset loading state
-    loading.value[number] = false
-  }, 3000)
-}
 
 </script>
 <style scoped>
@@ -158,7 +146,7 @@ function simulateProgress(number) {
 }
 
 .elevator-button-height {
-  min-height: 150px;
+  min-height: 100px;
   /* Adjust as needed */
 }
 
@@ -170,12 +158,34 @@ function simulateProgress(number) {
 }
 
 .elevator-card {
-  min-height: 310px;
+  min-height: 200px;
   width: 100px;
 }
 
 .card-header {
   background-color: cadetblue;
   color: brown;
+  max-height: 50px;
+}
+
+.close-btn {
+  width: 70px;
+  height: 8px;
+  text-align: center;
+  font-size: 8px;
+}
+
+.header-text {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.floor-label {
+  width: 100%;
+  height: 20%;
+  text-align: center;
+  background-color: aliceblue;
+  border: 1px solid #808080;
+  color: black;
 }
 </style>
