@@ -13,3 +13,5 @@ I didn't implement to handle many elevator request at a time.
 ## To run
 
 npm run dev
+
+It run on port  http://localhost:8089/
