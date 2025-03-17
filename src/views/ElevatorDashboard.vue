@@ -17,15 +17,16 @@
               <q-separator dark />
               <!------Buttons inside elevator to move to a floor-->
               <q-card-section class="items-center q-pa-none q-mt-md"
-                v-if="avaliableElevators.size > 0 &&  avaliableElevators.has(item.elevatorId)"
-               >
+                v-if="avaliableElevators.size > 0 && avaliableElevators.has(item.elevatorId)">
                 <div v-for="(row, rowIndex) in buttonRows" :key="rowIndex" class="row no-wrap justify-center">
                   <q-col v-for="(button, index) in row" :key="index" cols="6">
-                    <q-btn size="10px" @click="passengerDestinationFloor(button.value, item.elevatorId)">{{ button.label }}</q-btn>
+                    <q-btn size="10px" @click="passengerDestinationFloor(button.value, item.elevatorId)">{{ button.label
+                    }}</q-btn>
                   </q-col>
                 </div>
 
-                <q-btn class="q-pa-none q-mt-xs close-btn" color="primary" @click="closeElevator(item.elevatorId)">close</q-btn>
+                <q-btn class="q-pa-none q-mt-xs close-btn" color="primary"
+                  @click="closeElevator(item.elevatorId)">close</q-btn>
 
               </q-card-section>
               <q-card-section v-else />
@@ -35,19 +36,10 @@
         <!----Buttons in each floor to request an elevator-->
         <div class="row justify-center  no-wrap elevator-button-height q-pa-none q-mt-md">
           <q-col v-for="floor in floors" :key="floor.value" cols="auto" class=" q-pa-none q-mr-xs">
-            <q-btn 
-               class="close-btn" 
-               :disable="floor.value === maxFloor" 
-               :class="getButtonClass(floor.value, 'up')"
-              :icon="floor.value === maxFloor ? '' : 'arrow_upward'" 
-              @click="requestElevator(floor.value, 'up')" />
-            <q-btn 
-               class="close-btn"
-              :disable="floor.value === minFloor"
-              :class="getButtonClass(floor.value, 'down')"
-             :icon="floor.value === minFloor ? '' : 'arrow_downward'"
-             @click="requestElevator(floor.value, 'down')"
-              />
+            <q-btn class="close-btn" :disable="floor.value === maxFloor" :class="getButtonClass(floor.value, 'up')"
+              :icon="floor.value === maxFloor ? '' : 'arrow_upward'" @click="requestElevator(floor.value, 'up')" />
+            <q-btn class="close-btn" :disable="floor.value === minFloor" :class="getButtonClass(floor.value, 'down')"
+              :icon="floor.value === minFloor ? '' : 'arrow_downward'" @click="requestElevator(floor.value, 'down')" />
             <p class="q-mt-xs floor-label">Floor {{ floor.label }}</p>
           </q-col>
         </div>
@@ -60,36 +52,30 @@
 </template>
 
 <script setup>
-// Most of the code should be move to other files which i created some of it and refactor but not time for me right now.
-import { ref, onMounted } from 'vue';
+import { ref, onMounted , computed} from 'vue';
 import ElevatorDashboardHeader from "@/components/ElevatorDashboardHeader.vue";
 import LogsText from "@/components/LogsText.vue";
 import axios from 'axios';
+import { floorsLabel, elevatorButtons } from "@/constants/floors"
+
+/** initialize variables */
 const elevator = ref([]);
-const floors = ref([
-  { value: 0, label: "G"},
-  { value: 1, label: "1"},
-  { value: 2, label: "2"},
-  { value: 3, label: "3" },
-  { value: 4, label: "4" },
-  { value: 5, label: "5" }
-]);
+const floors = ref([]);
+const buttonRows = ref([]);
 const minFloor = 0;
-const maxFloor = floors.value.length - 1;
-const buttonRows = ref([
-  [{ value: 0, label: "G" }, { value: 1, label: "1" }],
-  [{ value: 2, label: "2" }, { value: 3, label: "3" }],
-  [{ value: 4, label: "4" }, { value: 5, label: "5" }]
-]);
+const maxFloor = computed(() => floors.value.length - 1);
 const logs = ref([])
-const selectedFloor = ref(null); // Stores selected button value
+const selectedFloor = ref(null); 
 const selectedDirection = ref(null);
+const avaliableElevators = ref(new Set());
 
-
+/** functions */
 onMounted(async () => {
+  floors.value = floorsLabel;
+  buttonRows.value = elevatorButtons
   elevatorStatus()
 });
-const avaliableElevators = ref(new Set());
+
 const requestElevator = async (floor, direction) => {
   try {
     selectedFloor.value = floor
@@ -102,7 +88,6 @@ const requestElevator = async (floor, direction) => {
     console.error("Error fetching data:", error);
   }
 }
-
 
 
 const elevatorStatus = async () => {
@@ -129,7 +114,7 @@ const closeElevator = async (elevatorId) => {
   try {
     await axios.get(`/api/elevator/move-elevator?elevatorId=${elevatorId}`);
     avaliableElevators.value.delete(elevatorId);
-   resetElevator();
+    resetElevator();
     elevatorStatus();
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -152,9 +137,6 @@ const getButtonClass = (floorValue, direction) => {
     'arrow-default': !(selectedFloor.value === floorValue && selectedDirection.value === direction)
   };
 }
-
-// To smulate progress but not time to do that.
-
 </script>
 <style scoped>
 .font-size {
