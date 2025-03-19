@@ -7,10 +7,9 @@
 </template>
 
 <script setup>
-const props = defineProps({
-    logs: {
-        type: Array,
-        required: true,
-    },
-});
+import { ref, computed } from 'vue';
+import { useElevator } from "@/stores/elevator";
+const elevatorStore = useElevator();
+const logs=computed(() => elevatorStore.logs);
+
 </script>
